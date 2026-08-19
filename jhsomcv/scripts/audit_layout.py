@@ -21,7 +21,11 @@ SCALE   = 0.5175                # the scale the user's Excel actually prints at
 USABLE  = (11.0 - 0.45 - 0.75) * 72.0
 
 def audit(path):
-    wb = openpyxl.load_workbook(path)
+    # rich_text=True so a cell carrying bold runs (a citation with the owner's
+    # name emphasised) is distinguishable from a plain narrative paragraph.
+    # Charging a plain paragraph the bold width penalty over-estimates every
+    # line and manufactures a spurious extra row on long blocks.
+    wb = openpyxl.load_workbook(path, rich_text=True)
     ws = wb.active
     problems = []
 
@@ -36,6 +40,18 @@ def audit(path):
     for row in ws.iter_rows():
         for cell in row:
             v = cell.value
+            bf = 0.0
+            if type(v).__name__ == 'CellRichText':
+                # measure the bold share instead of assuming it
+                tot = bold = 0
+                for run in v:
+                    txt = getattr(run, 'text', run)
+                    fnt = getattr(run, 'font', None)
+                    tot += len(txt)
+                    if fnt is not None and getattr(fnt, 'b', False): bold += len(txt)
+                bf = (bold / tot) if tot else 0.0
+            if v is not None and not isinstance(v, str):
+                v = str(v)
             if not isinstance(v, str) or not v.strip():
                 continue
             key = (cell.row, cell.column)
@@ -47,12 +63,12 @@ def audit(path):
                 # a non-wrapping cell spills into the empty columns to its right,
                 # which is how the headings are laid out; only a spill past column D matters
                 room = sum(UNITS[c] for c in range(cell.column, 5))
-                if lines_needed(v, room) > 1:
+                if lines_needed(v, room, bf) > 1:
                     problems.append(('SPILLS PAST D', cell.coordinate,
                                      '%d chars from column %s exceeds the printable width: %s'
                                      % (len(v), cell.column_letter, v[:60])))
                 continue
-            need = lines_needed(v, width_units)
+            need = lines_needed(v, width_units, bf)
             rows_avail = r2 - cell.row + 1
             height_pt = rows_avail * ROW_PT
             if need * LINE_PT > height_pt + 0.5:
@@ -185,8 +201,28 @@ def check_overlaps(pdf):
 
 
 if __name__ == '__main__':
+    import os
     path = sys.argv[1] if len(sys.argv) > 1 else 'cv.xlsx'
     probs, ws, nbreaks = audit(path)
+
+    # The analytic wrap model is an estimate and runs about one line long on
+    # paragraphs of eight lines or more. Where a rendered PDF is available the
+    # geometry is a measurement, so cross-check every analytic CLIPPED against it
+    # and report only the ones measurement agrees with. Reporting the rest as
+    # issues trains you to ignore the audit, which is worse than not auditing.
+    _pdf = sys.argv[2] if len(sys.argv) > 2 else None
+    overestimates = 0
+    if _pdf and os.path.exists(_pdf):
+        try:
+            from check_clipping import check as _geom
+            _bad, _unver = _geom(path, _pdf, report_unverified=True)
+            confirmed = {c for c, _r, _o, _t in _bad} | {c for c, _t in _unver}
+            keep = [p for p in probs if p[0] != 'CLIPPED' or p[1] in confirmed]
+            overestimates = len(probs) - len(keep)
+            probs = keep
+        except Exception as _e:
+            print('  (geometric cross-check unavailable: %s)' % _e)
+
     counts = Counter(p[0] for p in probs)
     print('%s: %d rows, %d page breaks, %d issue(s) %s'
           % (path, ws.max_row, nbreaks, len(probs), dict(counts)))
@@ -194,7 +230,8 @@ if __name__ == '__main__':
         print('  [%s] %s  %s' % (kind, where, why))
     if len(probs) > 60:
         print('  ... and %d more' % (len(probs) - 60))
-    import os
+    if overestimates:
+        print('  (%d analytic clipping warning(s) overruled by the rendered geometry)' % overestimates)
     pdf = sys.argv[2] if len(sys.argv) > 2 else None
     if pdf and os.path.exists(pdf):
         miss = check_pdf(path, pdf)

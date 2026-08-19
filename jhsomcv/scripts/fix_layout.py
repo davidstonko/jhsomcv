@@ -8,8 +8,8 @@ Pass 2 (shrink): try taking a row back off every block that was grown, all at on
                  filling up with stray blank lines.
 """
 import json, os, re, subprocess, sys, openpyxl
-from audit import check_overlaps
-from geomcheck import check as geom_check
+from audit_layout import check_overlaps
+from check_clipping import check as geom_check
 
 XLSX = 'cv.xlsx'
 PDF = 'preview.pdf'
@@ -50,15 +50,20 @@ def offenders():
     for coord, rows, over, txt in geom_check(XLSX, PDF):
         v = ws[coord].value
         if isinstance(v, str): bad.add(key(v))
-    # the analytic wrap model is authoritative too: a block the model says is
-    # clipped must keep its row even if the rendered preview happens to fit.
-    # Without this, trim() and the geometric check argue forever over the two or
-    # three blocks where they disagree by a few points.
-    from audit_layout import audit as _analytic
-    for kind, coord, _msg in _analytic(XLSX)[0]:
-        if kind == 'CLIPPED':
-            v = ws[coord].value
-            if isinstance(v, str): bad.add(key(v))
+    # Measurement beats estimate. The geometric check reads the rendered PDF and is
+    # ground truth for any block it can trace; the analytic wrap model is an estimate
+    # that runs about one line long on paragraphs of eight lines or more. Union the
+    # two and every long narrative block keeps a row it does not need, which is
+    # exactly the "random extra space under the paragraph" complaint. So the analytic
+    # result is consulted only for blocks the geometry could NOT trace.
+    _, _unver = geom_check(XLSX, PDF, report_unverified=True)
+    _unkeys = {key(ws[c].value) for c, _t in _unver if isinstance(ws[c].value, str)}
+    if _unkeys:
+        from audit_layout import audit as _analytic
+        for kind, coord, _msg in _analytic(XLSX)[0]:
+            if kind == 'CLIPPED':
+                v = ws[coord].value
+                if isinstance(v, str) and key(v) in _unkeys: bad.add(key(v))
     ovl = [o for o in check_overlaps(PDF) if o[0] == 'COLLISION']
     if ovl:
         pages = pdf_lines(PDF)
@@ -82,6 +87,40 @@ def grow():
         e = load()
         for k in bad: e[k] = e.get(k, 0) + 1
         save(e)
+
+def trim():
+    """Take back rows the model over-allotted. Detected geometrically: a block whose
+    text ends more than a full row above its bottom edge has a spare row. Trim all of
+    them, then restore only the ones that break. Iterate: each pass restores the
+    blocks that broke, which frees the geometry to reveal slack the pass before it
+    was masking, so a low pass cap silently leaves spare rows in the document."""
+    for i in range(30):
+        _, slack = geom_check(XLSX, PDF, report_slack=True)
+        if not slack:
+            print('  trim pass %d: no spare rows' % i); return
+        ws = openpyxl.load_workbook(XLSX).active
+        e = load()
+        touched = {}
+        for coord, rows, spare, txt in slack:
+            v = ws[coord].value
+            if isinstance(v, str):
+                k = key(v); touched[k] = spare; e[k] = e.get(k, 0) - spare
+        save(e); build()
+        bad = offenders()
+        if bad:
+            for k in bad:
+                if k in touched:
+                    e[k] = e.get(k, 0) + touched[k]
+            save(e); build()
+            if offenders():                  # still broken: undo the whole pass
+                for k, sp in touched.items():
+                    e[k] = e.get(k, 0) + sp
+                save(e); build()
+                print('  trim pass %d: reverted' % i); return
+        removed = len(touched) - len(bad & set(touched))
+        print('  trim pass %d: removed %d spare row(s)' % (i, removed))
+        if removed == 0:
+            return
 
 def shrink():
     for i in range(8):
@@ -113,5 +152,6 @@ if __name__ == '__main__':
         os.remove(EXTRA)
     grow()
     shrink()
+    trim()
     build()
     print('final:', len(offenders()), 'offender(s);', sum(load().values()), 'extra row(s) across', len(load()), 'block(s)')

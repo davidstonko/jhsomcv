@@ -46,7 +46,7 @@ def calibrate(ws, pages, ht):
 
 def norm(s): return re.sub(r'[^a-z0-9]', '', s.lower())
 
-def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False):
+def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False, report_slack=False):
     ws = openpyxl.load_workbook(xlsx).active
     pages = words_by_page(pdf)
     scale, top = calibrate(ws, pages, ht)
@@ -55,7 +55,18 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False):
     rmap = row_map(ws, ht, scale, top)
     plines = [lines_of(p) for p in pages]
     spans = {(m.min_row, m.min_col): (m.max_row, m.max_col) for m in ws.merged_cells.ranges}
-    bad, unverified = [], []
+    bad, unverified, slack = [], [], []
+    # A dated entry puts a short label in the left column and the body to its right,
+    # both merged over the same rows. The label legitimately ends well above the
+    # bottom of that range -- the body sets the height, not the label. Counting that
+    # as slack makes the fix loop try to shrink a block it does not control, which
+    # never converges. Only the rightmost wrapped cell of a row governs its height.
+    governs = {}
+    for row in ws.iter_rows():
+        for cell in row:
+            v = cell.value
+            if isinstance(v, str) and v.strip() and cell.alignment.wrap_text:
+                if cell.column > governs.get(cell.row, 0): governs[cell.row] = cell.column
     for row in ws.iter_rows():
         for cell in row:
             v = cell.value
@@ -74,7 +85,14 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False):
                 if ly > y_bot + 60: break
                 lt = norm(ltext)
                 if not acc:
-                    i = lt.find(target[:24])
+                    # Adaptive anchor: a short block whose text wraps mid-anchor — a
+                    # two-line label in the left column, say — is never found with a
+                    # fixed 24-character key, and lands in UNVERIFIED unchecked.
+                    i = -1
+                    for n in (24, 14, 10):
+                        if len(target) >= n:
+                            i = lt.find(target[:n])
+                            if i >= 0: break
                     if i < 0: continue
                     seg = lt[i:]
                 else:
@@ -84,6 +102,17 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False):
                 k = 0
                 while k < min(len(seg), len(rem)) and seg[k] == rem[k]:
                     k += 1
+                if k == 0 and acc:
+                    # A multi-line label in the left column interleaves with the body
+                    # text: the rendered line reads "venous disease is cited in two..."
+                    # where the block's own text continues at "is cited in two...".
+                    # Re-anchor inside the line instead of giving up, or the block is
+                    # reported UNVERIFIED and silently goes unchecked.
+                    j = seg.find(rem[:14]) if len(rem) >= 14 else -1
+                    if j > 0:
+                        seg = seg[j:]
+                        while k < min(len(seg), len(rem)) and seg[k] == rem[k]:
+                            k += 1
                 if k == 0:
                     if acc: break
                     continue
@@ -98,6 +127,12 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False):
                 continue
             if last_y > y_bot + overflow_tol:
                 bad.append((cell.coordinate, r2 - r1 + 1, round(last_y - y_bot, 1), v[:70]))
+            else:
+                spare = int((y_bot - last_y) // (ht * scale))
+                if spare >= 1 and (r2 - r1 + 1) - spare >= 1 and cell.column >= governs.get(r1, cell.column):
+                    slack.append((cell.coordinate, r2 - r1 + 1, spare, v[:70]))
+    if report_slack:
+        return bad, slack
     if report_unverified:
         return bad, unverified
     if unverified:
