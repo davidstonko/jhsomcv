@@ -57,6 +57,42 @@ Run `scripts/verify_pubs.py` with the extracted citations. For every entry it re
 
 Only **[OR]** carries the PubMed-indexing requirement. Case reports, reviews and editorials in non-indexed journals stay in their own categories.
 
+### Have the person open their own Google Scholar for you
+
+The single highest-yield source is also the one you cannot fetch: `scholar.google.com` refuses automated retrieval, and you must not route around that with shell commands or HTTP libraries. So ask the person to hand it to you. Do this **early**, as part of intake, not after you have built the document.
+
+Ask them to:
+
+1. Open their Scholar profile and load every article — append `&pagesize=100&sortby=pubdate` to the profile URL and click **Show more** until the button disappears. Scholar shows only 20 by default, and a profile audited at 20 articles is worse than useless because it looks complete.
+2. Tick the select-all checkbox in the article table header, then **Export → BibTeX**, and save the file.
+3. Send you the `.bib`.
+
+A BibTeX export is exact, structured, and covers items that never reach PubMed — meeting abstracts in journal supplements, book chapters, theses, preprints, non-indexed journals. Screenshots of the profile are the fallback, not the plan; they are slow, lossy, and cap out at whatever fits on screen.
+
+If Scholar is genuinely unavailable, say so in the final memo. **Never let an unread source pass silently as "checked"** — the person needs to know which stone was left unturned, because the whole point of the exercise is that anything omitted is credit they do not get.
+
+### Sweep the machine-readable sources yourself
+
+These do not need the person's help and should all be run:
+
+| Source | What it adds |
+|---|---|
+| PubMed E-utilities | the indexed core; publication-type tags for classification |
+| Europe PMC | preprints, some abstracts, and a `citations` endpoint |
+| Crossref `query.author` | anything with a DOI — book chapters, journal-supplement abstracts, editorials |
+| ORCID public `/works` | whatever the person has curated themselves |
+| ClinicalTrials.gov | NCT numbers for trials they are named on; adds verifiability to funding entries |
+
+Filter every result to items where the person is genuinely in the author list — a surname search will collect namesakes, and a wrong attribution on a promotions CV is far more damaging than an omission.
+
+**Diff against the publication sections specifically, not the whole document.** A paper listed only as a conference talk in the optional Section XII will look "present" if you search the full text, and will vanish the day the person deletes that section. Two real cases from the CV this skill was built on: a full-length journal article that existed only as its podium presentation, and seven published, DOI-bearing meeting abstracts that lived only among the posters.
+
+**Check the reverse direction too.** For every presentation and poster, ask whether it became a paper, and whether that paper is in the CV. Titles drift between abstract and publication — "Good Mid-Term Outcomes for the Treatment of Failing Infrainguinal Bypass Grafts" became "Superior Mid-Term Outcomes for the Treatment of Infrainguinal Bypass Graft Stenoses" — so match on authors and year, not title alone.
+
+### Verify the citations you already have
+
+Compare every citation's year, volume, issue and pages against the indexed record. The single most common error is an **epub-ahead-of-print date carried forward as the publication year**: a paper that appeared online in November 2023 and in print in 2024 is a 2024 paper. Three of four citation errors found in the reference CV were exactly this. The template warns that the committee may look each publication up, so a year that does not match is a real risk.
+
 Then report, do not silently fix:
 
 - **Authorship mismatches** — the person is listed on the CV but not in PubMed's author list, or vice versa. Always surface these.
@@ -93,6 +129,8 @@ Formatting rules that are explicit in the template:
 **Chronological order, earliest first, within every subcategory.** This is easy to break: the moment you reclassify an entry into a different category, it lands wherever you appended it. Sort each category by year after all reclassification is done, not before.
 
 **Author names must match the indexed record.** Diff every citation's author list against its PubMed record. Three kinds of error turn up: incomplete initials (`Kay H` where the record says `Kay HF`), conflicting initials (`Kay HL` for the same person listed as `Kay HF` two entries earlier), and inconsistency between the publication list and the presentation list for the same collaborator. Build one canonical form per surname from the indexed records, then apply it across the whole document — publications, presentations, curricula, patents. Be careful with surnames that belong to more than one person; leave those alone rather than collapsing them.
+
+A cheap way to surface these: collect every `Surname Initials` token in the whole document and flag any surname that appears with more than one initial form. Most hits are legitimate — two different people share a surname, `Cameron JL` and `Cameron AM` are both real — so the check produces candidates, not corrections. Confirm each against the indexed author list before changing anything. On the CV this skill was built from, that one pass found six genuine typos (`Scalea TJ` for `TM`, `Haut EH` for `ER`, `DeMartino RN` for `RR`, and three more) scattered across sections that had each been proofread on their own.
 
 ## Step 3b — Voice
 
