@@ -25,7 +25,9 @@ Every one of the 12 sections and all ~116 subcategories stays in the document. E
 Accept the source CV in any format. Extract every entry. Then ask the person only what cannot be inferred:
 
 1. Their rank and track, if they know it (Scholarship vs. Clinical Excellence; Assistant / Associate / Professor). It does not change the CV format, but it changes what you flag as thin.
-2. Anything the template requires that their CV has no data for — Clinical Focus, Educational Focus, Research Focus, Clinical Productivity. Offer to draft these and have them revise; do not invent numbers.
+2. Anything the template requires that their CV has no data for — Clinical Focus, Educational Focus, Research Focus, Clinical Productivity. Offer to draft the narrative sections and have them revise; do not invent numbers.
+
+   **Clinical Productivity means independent practice, not training.** It is attending operative volume, wRVUs, panel size, clinic volume — what the candidate generated as the responsible surgeon. A resident's or fellow's ACGME case log is a training record and does not belong here, so a trainee who has never billed correctly answers `NONE`. Do not treat that NONE as a gap to be filled or prompt them for case-log totals; it is the accurate answer until their first attending year, and the category then fills itself. The same distinction applies to anyone submitting a first-appointment CV straight out of training.
 3. Whether they use this CV for anything besides promotion (expert testimony, industry, grants). Content that serves those purposes but is not in the ABMF taxonomy goes to Section XII or gets flagged, never silently deleted.
 
 If the source CV's formatting is unclear or poor, ignore it entirely and use `references/word-format-spec.md`, which is derived from a known-good departmental CV. That gets you close every time.
