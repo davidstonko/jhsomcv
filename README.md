@@ -17,11 +17,17 @@ Output is a Microsoft Word `.docx`.
 
 ## Install
 
-Clone this repository into your Claude skills directory:
+The skill is the inner `jhsomcv/` folder, not the repository root. Clone the repository, then copy that folder into your Claude skills directory:
 
 ```
-git clone <this-repo-url> ~/.claude/skills/jhsomcv
+git clone https://github.com/davidstonko/jhsomcv.git
+mkdir -p ~/.claude/skills
+cp -r jhsomcv/jhsomcv ~/.claude/skills/
 ```
+
+That leaves `~/.claude/skills/jhsomcv/SKILL.md`, which is where Claude Code looks for a personal skill. Cloning the repository itself into `~/.claude/skills/` puts `SKILL.md` one level too deep and Claude will not find it.
+
+Cowork and claude.ai do not read `~/.claude/skills/`; they load the skills enabled for your claude.ai account. To use the skill there, add the same inner `jhsomcv/` folder from **Customize** in the Claude desktop app sidebar or from the skills settings on claude.ai.
 
 ## Use
 
