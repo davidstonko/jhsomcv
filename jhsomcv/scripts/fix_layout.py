@@ -6,20 +6,53 @@ Pass 1 (grow):   render, find blocks whose text prints outside the block or coll
 Pass 2 (shrink): try taking a row back off every block that was grown, all at once;
                  restore only the ones that break. This is what stops the document
                  filling up with stray blank lines.
+
+What it needs, none of which is in this repository:
+
+  a build command   Rebuilds the workbook from the per-block row overrides in EXTRA
+                    and renders it to PDF. The renderer is specific to the CV being
+                    built, so supply your own with --build or JHSOMCV_BUILD, e.g.
+                        --build "python3 render.py && bash mkpreview.sh"
+                    It runs through the shell in the current directory and must read
+                    EXTRA, write XLSX and produce PDF.
+  openpyxl          to read the workbook.
+  pdftotext         from poppler, to read the rendered PDF.
+
+Usage:
+    python3 fix_layout.py --build CMD [--xlsx cv.xlsx] [--pdf preview.pdf]
+                          [--extra extra_rows.json] [--reset]
 """
-import json, os, re, subprocess, sys, openpyxl
+import argparse, json, os, re, shutil, subprocess, sys
+
+def die(msg):
+    sys.exit('fix_layout.py: ' + msg)
+
+try:
+    import openpyxl
+except ImportError:
+    die('openpyxl is not installed (pip install openpyxl)')
 from audit_layout import check_overlaps
 from check_clipping import check as geom_check
 
-XLSX = 'cv.xlsx'
-PDF = 'preview.pdf'
-EXTRA = 'extra_rows.json'
+XLSX = os.environ.get('JHSOMCV_XLSX', 'cv.xlsx')
+PDF = os.environ.get('JHSOMCV_PDF', 'preview.pdf')
+EXTRA = os.environ.get('JHSOMCV_EXTRA', 'extra_rows.json')
+BUILD = os.environ.get('JHSOMCV_BUILD')
 
 def key(t): return re.sub(r'\s+', ' ', str(t))   # full text: a 90-char prefix collides between duplicate-prefix entries
 
 def build():
-    subprocess.run([sys.executable, 'render.py'], check=True, capture_output=True)
-    subprocess.run(['bash', 'mkpreview.sh'], check=True, capture_output=True)
+    """Run the caller's build command and confirm it produced the workbook and the PDF."""
+    if not BUILD:
+        die('no build command. Pass --build CMD or set JHSOMCV_BUILD; the command must '
+            'read %s, write %s and render %s. The renderer is CV-specific and is not '
+            'part of this repository.' % (EXTRA, XLSX, PDF))
+    r = subprocess.run(BUILD, shell=True, capture_output=True, text=True)
+    if r.returncode:
+        die('build command failed (exit %d): %s\n%s' % (r.returncode, BUILD, r.stderr.strip()[-2000:]))
+    for f, what in ((XLSX, 'workbook'), (PDF, 'PDF')):
+        if not os.path.exists(f):
+            die('build command ran but did not produce the %s %s: %s' % (what, f, BUILD))
 
 def load():
     return json.load(open(EXTRA)) if os.path.exists(EXTRA) else {}
@@ -147,11 +180,27 @@ def shrink():
         print('  shrink pass %d: reverted' % i)
         return
 
-if __name__ == '__main__':
-    if '--reset' in sys.argv and os.path.exists(EXTRA):
+def main():
+    global XLSX, PDF, EXTRA, BUILD
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--build', default=BUILD, help='shell command that rebuilds XLSX from EXTRA and renders PDF (or set JHSOMCV_BUILD)')
+    ap.add_argument('--xlsx', default=XLSX, help='workbook the build command writes (default %(default)s)')
+    ap.add_argument('--pdf', default=PDF, help='PDF the build command renders (default %(default)s)')
+    ap.add_argument('--extra', default=EXTRA, help='per-block row overrides, read by the build command (default %(default)s)')
+    ap.add_argument('--reset', action='store_true', help='discard the existing row overrides first')
+    a = ap.parse_args()
+    XLSX, PDF, EXTRA, BUILD = a.xlsx, a.pdf, a.extra, a.build
+    if not BUILD:
+        ap.error('no build command: pass --build CMD or set JHSOMCV_BUILD (see --help)')
+    if shutil.which('pdftotext') is None:
+        die('pdftotext is not on PATH; install poppler')
+    if a.reset and os.path.exists(EXTRA):
         os.remove(EXTRA)
     grow()
     shrink()
     trim()
     build()
     print('final:', len(offenders()), 'offender(s);', sum(load().values()), 'extra row(s) across', len(load()), 'block(s)')
+
+if __name__ == '__main__':
+    main()
