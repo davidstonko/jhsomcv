@@ -191,7 +191,7 @@ A submission copy has no shading and no legend.
 1. **Block fit.** Every wrapped cell must have enough rows for the lines its text actually needs. Do not estimate with `len(text) / average_chars`; that is wrong in both directions — it clips long words and it leaves ugly gaps after short entries. Simulate the word wrap with real font advance widths (`scripts/wrapcalc.py` does this for the Excel build, using URW P052 widths, which are metric-compatible with Book Antiqua and Palatino; a Times New Roman 11 pt Word build needs its own width table and a line width in points). Validate the model against a document known to be correct before trusting it.
 2. **Horizontal spill.** A heading in column A may overflow into the empty columns beside it — that is the house layout. Text spilling past the last column is not; it silently widens the print range and, with fit-to-page on, shrinks the whole document.
 3. **Pagination.** Compute page breaks at the scale the document actually prints at, not the scale stored in the file — they can differ. Count the title-block rows that precede the first section, or every break lands late.
-4. **Orphans.** No section or subsection heading may be the last thing on a page.
+4. **Orphans.** No section or subsection heading may be the last thing on a page. The template sets keep-with-next on every heading and on the blank line before it, so Word carries them over on its own as long as you fill the template rather than rebuilding it from scratch; the first build without that setting orphaned two headings.
 5. **Numbering.** Restarts at 1 in every subcategory, no gaps.
 6. **Fonts.** One family, one size, no stray sizes introduced by notes or annotations.
 
