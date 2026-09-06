@@ -102,7 +102,7 @@ Then report, do not silently fix:
 
 ## Step 3 — Build the document
 
-Copy `assets/jhsom-cv-template.docx` and fill it in with `python-docx`. `references/word-format-spec.md` has the exact geometry; the essentials:
+Copy `assets/jhsom-cv-template.docx` and fill it in with `python-docx` (`pip install python-docx` if it is not already installed; do not fall back to editing the XML by hand). `references/word-format-spec.md` has the exact geometry; the essentials:
 
 - Times New Roman 11 pt throughout. **No bold headings** — level-1 sections are distinguished by ALL CAPS, deeper levels by title case and blank lines. This is what the confirmed-correct departmental CV does.
 - US Letter; margins left 0.75", right 0.5", top 0.75", bottom 0.5".

@@ -29,6 +29,8 @@ That leaves `~/.claude/skills/jhsomcv/SKILL.md`, which is where Claude Code look
 
 Cowork and claude.ai do not read `~/.claude/skills/`; they load the skills enabled for your claude.ai account. To use the skill there, add the same inner `jhsomcv/` folder from **Customize** in the Claude desktop app sidebar or from the skills settings on claude.ai.
 
+The scripts need Python 3. `verify_pubs.py` uses only the standard library and internet access to PubMed. Building the document uses [python-docx](https://pypi.org/project/python-docx/) (`pip install python-docx`); Claude will install it on first use if it is missing, so this is only worth doing ahead of time on a machine that cannot install packages.
+
 ## Use
 
 ```
