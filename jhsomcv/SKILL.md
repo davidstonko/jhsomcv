@@ -7,12 +7,13 @@ description: Convert any CV (Word, PDF, Excel, text, or pasted) into the ABMF-re
 
 Builds a Word CV in the format **required** by the Advisory Board of the Medical Faculty (ABMF) and the Board of Trustees for every candidate seeking appointment or promotion at the Johns Hopkins University School of Medicine. The Silver Book itself contains no CV rules — it points to the ABMF CV Template and CV Instructions, which are what this skill implements.
 
-Three bundled resources do the work:
+The bundled resources do the work:
 
 - `references/abmf-rules.md` — the binding rules, quoted verbatim, plus how to apply each one. **Read this before writing anything.**
 - `references/word-format-spec.md` — page geometry, fonts, indents and tab stops, extracted from a CV the department confirms is correctly formatted. **Read before building the document.**
 - `assets/jhsom-cv-template.docx` — the complete I–XII skeleton with `NONE` under every subcategory, already in the correct geometry. **Start from this file. Never build from a blank document.**
 - `scripts/verify_pubs.py` — PubMed verification and publication-type classification. Run it; do not classify publications by eye.
+- `scripts/fill_template.py` — fills the template from a JSON content file with the correct geometry, bold owner, underlined mentees, per-subcategory numbering, shading and comments. Use it; do not write a builder from scratch.
 
 ## The one rule people get wrong
 
@@ -104,7 +105,7 @@ Then report, do not silently fix:
 
 ## Step 3 — Build the document
 
-Copy `assets/jhsom-cv-template.docx` and fill it in with `python-docx` (`pip install python-docx` if it is not already installed; do not fall back to editing the XML by hand). `references/word-format-spec.md` has the exact geometry; the essentials:
+Fill `assets/jhsom-cv-template.docx` with `scripts/fill_template.py`. Write the content as JSON keyed by leaf category (`python3 fill_template.py --list` prints the keys and the docstring shows the entry kinds), then `python3 fill_template.py content.json CV.docx` for the working copy and add `--no-shade` for the submission copy. It walks the template in taxonomy order, replaces only the NONE lines you supply content for, applies the geometry below, bolds the owner and underlines mentees by splitting each entry into runs, restarts numbering in every subcategory, and carries the shading and comments of Step 4. Do not build from a blank document and do not edit the document XML by hand. It needs `python-docx` (`pip install python-docx`; 1.2 or later for the comments). `references/word-format-spec.md` has the exact geometry; the essentials:
 
 - Times New Roman 11 pt throughout. **No bold headings** — level-1 sections are distinguished by ALL CAPS, deeper levels by title case and blank lines. This is what the confirmed-correct departmental CV does.
 - US Letter; margins left 0.75", right 0.5", top 0.75", bottom 0.5".
@@ -130,7 +131,7 @@ Formatting rules that are explicit in the template:
 
 **Chronological order, earliest first, within every subcategory.** This is easy to break: the moment you reclassify an entry into a different category, it lands wherever you appended it. Sort each category by year after all reclassification is done, not before.
 
-**Author names must match the indexed record.** Diff every citation's author list against its PubMed record. Three kinds of error turn up: incomplete initials (`Kay H` where the record says `Kay HF`), conflicting initials (`Kay HL` for the same person listed as `Kay HF` two entries earlier), and inconsistency between the publication list and the presentation list for the same collaborator. Build one canonical form per surname from the indexed records, then apply it across the whole document — publications, presentations, curricula, patents. Be careful with surnames that belong to more than one person; leave those alone rather than collapsing them.
+**Author names must match the indexed record.** Diff every citation's author list against its PubMed record. Three kinds of error turn up: incomplete initials (`Kay H` where the record says `Kay HF`), conflicting initials (`Kay HL` for the same person listed as `Kay HF` two entries earlier), and inconsistency between the publication list and the presentation list for the same collaborator. Build one canonical form per surname from the indexed records, then apply it across the whole document — publications, presentations, curricula, patents. Be careful with surnames that belong to more than one person; leave those alone rather than collapsing them. When the indexed records disagree with each other (one lists `Holscher C`, the rest `Holscher CM`), take the fuller form where the shorter is a prefix of it and say so in the memo; when a meeting-abstract source such as Crossref disagrees with PubMed, PubMed wins.
 
 A cheap way to surface these: collect every `Surname Initials` token in the whole document and flag any surname that appears with more than one initial form. Most hits are legitimate — two different people share a surname, `Cameron JL` and `Cameron AM` are both real — so the check produces candidates, not corrections. Confirm each against the indexed author list before changing anything. On the CV this skill was built from, that one pass found six genuine typos (`Scalea TJ` for `TM`, `Haut EH` for `ER`, `DeMartino RN` for `RR`, and three more) scattered across sections that had each been proofread on their own.
 
@@ -180,7 +181,7 @@ Ask explicitly which conference talks were **invited** — invited talks belong 
 
 Shade flagged content while the person is still deciding — one colour for content the ABMF format does not ask for, another for entries that need their attention — and put a legend at the foot of the document explaining both. It makes the open questions visible instead of burying them in a memo.
 
-Then **build the removal in from the start.** Put the shading behind a single boolean (`SHADE = True`) that gates every fill, every flagged-cell colour and the legend line itself. The moment the person has adjudicated their flags they will ask for all of it gone, and if the fills are scattered through the builder you will hunt them one at a time and miss some. Flip one constant instead. Keep the cell comments when the shading goes — they carry the same information, they do not print, and Excel and Word both mark a commented cell natively.
+Then **build the removal in from the start.** Put the shading behind a single switch that gates every fill, every flagged colour and the legend line itself. The moment the person has adjudicated their flags they will ask for all of it gone, and if the fills are scattered through a builder you will hunt them one at a time and miss some. `fill_template.py` does this for you: each entry's `shade` key picks the colour and its `note` becomes a Word comment, and `--no-shade` removes every fill and the legend in one go. Keep the comments when the shading goes — they carry the same information, they do not print, and Word marks a commented paragraph natively.
 
 A submission copy has no shading and no legend.
 

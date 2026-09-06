@@ -55,6 +55,7 @@ jhsomcv/                         the skill folder, which is what gets installed
   scripts/wrapcalc.py            word-wrap line counting from real font advance widths
   scripts/p052_widths.json       the advance widths wrapcalc.py reads
   scripts/build_template.py      generates the blank template in assets/ from taxonomy.py
+  scripts/fill_template.py       fills the template from JSON content: geometry, bold owner, underlined mentees, numbering, shading, comments
   scripts/excel-reference/       the measured layout audit for an Excel build, reference only:
     audit_layout.py              analytic layout audit
     check_clipping.py            geometric clipping detection from the rendered PDF
@@ -65,7 +66,7 @@ jhsomcv/                         the skill folder, which is what gets installed
 
 This was extracted from a one-off reformatting of a single CV and has not been generalized much beyond it. What is automated and what is not:
 
-- **Automated.** PubMed verification and publication-type classification (`scripts/verify_pubs.py`), the section tree (`scripts/taxonomy.py`), and generation of the blank I–XII template (`scripts/build_template.py`).
+- **Automated.** PubMed verification and publication-type classification (`scripts/verify_pubs.py`), the section tree (`scripts/taxonomy.py`), generation of the blank I–XII template (`scripts/build_template.py`), and filling it (`scripts/fill_template.py`: hanging indents, bold owner, underlined mentees, numbering that restarts in every subcategory, working-copy shading and comments, one flag to strip the shading for submission). Deciding what goes in each category is still Claude's job.
 - **Manual.** The layout check for the Word output. Nothing in this repository measures a `.docx`. Render it to PDF and inspect at least the first page, a dense publications page, and the last page against the checklist in Step 5 of `SKILL.md`.
 - **Reference only.** `scripts/excel-reference/` is the measured layout audit (word-wrap simulation, clipping and line-collision detection from the rendered PDF, then a grow-and-trim fix loop) as it was implemented for an Excel build of the same CV. It needs `openpyxl`, poppler's `pdftotext`, and a renderer of your own that turns the workbook into a PDF; `fix_layout.py` takes that renderer as `--build CMD` and stops with a message if it is not given one. It does not run against a `.docx`.
 - **Calibrated to Excel.** `scripts/wrapcalc.py` counts wrapped lines from real font advance widths, which is the right method for any format, but as shipped its constants are Book Antiqua 14 pt in Excel column-width units, with Palatino-compatible widths in `p052_widths.json`. A Times New Roman 11 pt Word build needs its own width table and a line width in points before its output means anything.
