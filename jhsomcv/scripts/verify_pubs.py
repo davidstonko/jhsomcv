@@ -12,9 +12,18 @@ citations.txt  : one citation per line.
 
 Output JSON, one object per input citation:
     {index, text, pmid, score, pubmed:{...}, suggested_category, reason, flags:[...]}
+plus pubmed_records_not_on_cv, the indexed records no citation claimed.
 
 Category codes: OR RA CR BC BK ED GL LT CS CW MT OP RO PR PC WP MR OM
-Only OR requires PubMed indexing.
+Only OR requires PubMed indexing. EXCLUDE marks work that is not yet published.
+
+Flags worth reading before trusting suggested_category:
+    NEAR MISS   no record cleared the match threshold, but one came close. Usually the
+                CV title is wrong or truncated; check before calling the paper unindexed.
+    JOURNAL     the matched record is in a journal the citation does not name. A meeting
+                abstract matches its own full paper this way; the record is then left in
+                pubmed_records_not_on_cv so the missing full paper is still reported.
+    EXCLUDE     reads as in preparation, submitted or under review.
 """
 import argparse, json, re, sys, time, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
@@ -105,10 +114,24 @@ def title_search(title):
             return parse_articles(_get(E + "efetch.fcgi?db=pubmed&retmode=xml&id=" + ",".join(ids)))
     return []
 
-PROCEEDINGS = re.compile(r'\b(10S|CN_suppl|Suppl(ement)?[_ ]?\d|Abstract\b)', re.I)
+PROCEEDINGS = re.compile(r'\b(10S|CN_suppl|Suppl(ement)?[_ ]?\d|Abstract\b|e\d+-e\d+\b)', re.I)
+UNPUBLISHED = re.compile(r'\b(in preparation|in prep\.?|submitted|under review|in review|planned|forthcoming)\b', re.I)
+NEAR_MISS = 0.4          # below MATCH but above this: report the closest record instead of silence
+MATCH = 0.6
+
+def journal_mismatch(text, rec):
+    """True when the matched record's journal is not named in the citation. The ISO
+    abbreviation's tokens are matched as substrings so 'J Vasc Surg' also accepts
+    'Journal of Vascular Surgery'; one-letter tokens are skipped."""
+    jn = norm(rec.get('journal') or '')
+    if not jn: return False
+    t = norm(text)
+    return any(tok not in t for tok in jn.split() if len(tok) > 1)
 
 def categorize(text, rec, hint=''):
     t = text
+    if UNPUBLISHED.search(t):
+        return 'EXCLUDE', 'reads as unpublished; the template allows only published or in-press work'
     if hint == 'BC' or re.search(r'\b\(Eds?\)\b|In\s+[A-Z][a-z]+,\s', t):
         return 'BC', 'book chapter'
     if PROCEEDINGS.search(t):
@@ -143,6 +166,7 @@ def main():
     idx = [(set(toks(r['title'])), shingles(toks(r['title'])), r) for r in corpus if r['title']]
 
     seen = {}
+    claimed = set()      # records a citation genuinely accounts for; abstracts and wrong-journal matches do not
     out = []
     for i, c in enumerate(cites, 1):
         ct = toks(c); cs = shingles(ct); cset = set(ct)
@@ -151,15 +175,20 @@ def main():
             if not tset: continue
             sc = 0.4 * (len(tset & cset) / len(tset)) + 0.6 * (len(tsh & cs) / max(1, len(tsh)))
             if sc > bs: bs, best = sc, r
-        if bs < 0.6:
+        if bs < MATCH:
             for r in title_search(extract_title(c)):
                 tset = set(toks(r['title'])); tsh = shingles(toks(r['title']))
                 sc = 0.4 * (len(tset & cset) / len(tset or {1})) + 0.6 * (len(tsh & cs) / max(1, len(tsh)))
                 if sc > bs: bs, best = sc, r
             time.sleep(0.34)
-        rec = best if bs >= 0.6 else None
+        rec = best if bs >= MATCH else None
         cat, why = categorize(c, rec)
         flags = []
+        if rec is None and best is not None and bs >= NEAR_MISS and cat != 'EXCLUDE':
+            flags.append('NEAR MISS: closest PubMed record is PMID %s, "%s" (%s %s), similarity %.2f; '
+                         'if this is the same paper the CV title is wrong, and the category above is not to be trusted'
+                         % (best['pmid'], best['title'], best['journal'], best['year'], bs))
+            why = 'no PubMed match at the %.1f threshold; see the NEAR MISS flag before treating this as not indexed' % MATCH
         if rec:
             if rec['pmid'] in seen:
                 flags.append('DUPLICATE of entry #%d (same PMID %s)' % (seen[rec['pmid']], rec['pmid']))
@@ -171,10 +200,19 @@ def main():
             if rec['volume'] and rec['volume'] not in c:
                 flags.append('CITATION: PubMed gives %s;%s(%s):%s — check the CV citation'
                              % (rec['year'], rec['volume'], rec['issue'], rec['pages']))
+            if journal_mismatch(c, rec):
+                flags.append('JOURNAL: PMID %s is in %s, which the citation does not name; a meeting abstract '
+                             'matches its own full paper this way. The record is left unclaimed so it is still '
+                             'reported below if the full paper is not on the CV' % (rec['pmid'], rec['journal']))
+            elif cat == 'PR':
+                flags.append('PROCEEDINGS: cited as an abstract but matched to PMID %s; check whether that is the full '
+                             'paper and whether it is on the CV' % rec['pmid'])
+            if cat not in ('PR',) and not any(f.startswith('JOURNAL') for f in flags):
+                claimed.add(rec['pmid'])
         out.append(dict(index=i, text=c, pmid=(rec or {}).get('pmid'), score=round(bs, 3),
                         pubmed=rec, suggested_category=cat, reason=why, flags=flags))
 
-    used = {o['pmid'] for o in out if o['pmid']}
+    used = claimed
     missing = [r for r in corpus if r['pmid'] not in used]
     json.dump(dict(entries=out,
                    pubmed_records_not_on_cv=[dict(pmid=r['pmid'], title=r['title'], journal=r['journal'],

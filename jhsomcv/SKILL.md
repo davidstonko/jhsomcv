@@ -93,6 +93,8 @@ Filter every result to items where the person is genuinely in the author list â€
 
 Compare every citation's year, volume, issue and pages against the indexed record. The single most common error is an **epub-ahead-of-print date carried forward as the publication year**: a paper that appeared online in November 2023 and in print in 2024 is a 2024 paper. Three of four citation errors found in the reference CV were exactly this. The template warns that the committee may look each publication up, so a year that does not match is a real risk.
 
+**Read the flags before the categories.** A citation the script could not match comes back as `[RO]` with a `NEAR MISS` flag naming the closest indexed record; the usual cause is a truncated or drifted title on the CV, and the right move is to check that record and correct the title, not to file an indexed paper as unindexed. A `JOURNAL` flag means the matched record is in a journal the citation does not name, which is what a meeting abstract does when it matches its own full paper; the script leaves that record unclaimed so the full paper is still reported as missing if it is. `EXCLUDE` marks entries that read as in preparation, submitted or under review; the template allows only published or in-press work.
+
 Then report, do not silently fix:
 
 - **Authorship mismatches** â€” the person is listed on the CV but not in PubMed's author list, or vice versa. Always surface these.
