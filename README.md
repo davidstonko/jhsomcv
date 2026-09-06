@@ -39,19 +39,24 @@ or just ask: *"put my CV in the Hopkins promotions format."* Attach the CV in an
 
 ## Layout
 
+The skill is the `jhsomcv/` folder; the repository root holds only this README and the license.
+
 ```
-SKILL.md                       the procedure
-references/abmf-rules.md       the binding ABMF rules, quoted verbatim
-references/word-format-spec.md page geometry from a confirmed-correct departmental CV
-assets/                        the I-XII skeleton, pre-formatted
-scripts/verify_pubs.py         PubMed verification and publication-type classification
-scripts/taxonomy.py            the section tree
-scripts/wrapcalc.py            word-wrap line counting from real font advance widths
-scripts/build_template.py      document assembly
-scripts/excel-reference/       the measured layout audit for an Excel build, reference only:
-  audit_layout.py              analytic layout audit
-  check_clipping.py            geometric clipping detection from the rendered PDF
-  fix_layout.py                the render -> measure -> correct loop
+README.md, LICENSE
+jhsomcv/                         the skill folder, which is what gets installed
+  SKILL.md                       the procedure
+  references/abmf-rules.md       the binding ABMF rules, quoted verbatim
+  references/word-format-spec.md page geometry from a confirmed-correct departmental CV
+  assets/                        the I-XII skeleton, pre-formatted
+  scripts/verify_pubs.py         PubMed verification and publication-type classification
+  scripts/taxonomy.py            the section tree
+  scripts/wrapcalc.py            word-wrap line counting from real font advance widths
+  scripts/p052_widths.json       the advance widths wrapcalc.py reads
+  scripts/build_template.py      generates the blank template in assets/ from taxonomy.py
+  scripts/excel-reference/       the measured layout audit for an Excel build, reference only:
+    audit_layout.py              analytic layout audit
+    check_clipping.py            geometric clipping detection from the rendered PDF
+    fix_layout.py                the render -> measure -> correct loop
 ```
 
 ## Status and known limitations
