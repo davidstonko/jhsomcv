@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Layout audit for the ABMF Excel CV. Run before delivering anything.
 
+Reference implementation for an Excel build of the CV: it reads an .xlsx with
+openpyxl and, optionally, its rendered PDF with pdftotext. It does not read a
+.docx; the Word build has no automated equivalent yet.
+
 Checks, using the character capacities measured from a real Excel print:
   1. every text cell fits its merged block (no clipped lines)
   2. no page overflows the printable height
@@ -9,7 +13,8 @@ Checks, using the character capacities measured from a real Excel print:
   5. nothing sits in column E or beyond
   6. one font family and size throughout
 """
-import html, sys, re, openpyxl
+import html, os, sys, re, openpyxl
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))   # wrapcalc.py lives in scripts/
 from wrapcalc import lines_needed
 from collections import Counter
 

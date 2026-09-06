@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Geometric clipping check.
+"""Geometric clipping check, for an Excel build: reads the .xlsx with openpyxl and
+its rendered PDF with pdftotext. It does not read a .docx.
 
 Map every sheet row to its position in the rendered PDF, then walk the block's text
 through the rendered lines and see where it actually ends. If it ends below the
