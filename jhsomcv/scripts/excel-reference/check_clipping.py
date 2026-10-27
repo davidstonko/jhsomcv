@@ -7,7 +7,7 @@ through the rendered lines and see where it actually ends. If it ends below the
 block's bottom edge, the block is clipped — the failure that leaves no trace in a
 text dump and collides with nothing when the next row is blank.
 """
-import html, re, subprocess, sys, openpyxl
+import html, os, re, subprocess, sys, openpyxl
 
 def words_by_page(pdf):
     out = subprocess.run(['pdftotext', '-bbox', pdf, '-'], capture_output=True, text=True).stdout
@@ -25,6 +25,14 @@ def lines_of(page):
             cur = [y0, y1, [(x0, t)]]; out.append(cur)
     return [(a, b, ' '.join(t for _, t in sorted(ws))) for a, b, ws in out]
 
+BASE_PT = 19.5      # the sheet's nominal row height; LibreOffice prints it as `ht`
+
+def row_ht(ws, r, ht):
+    """Printed height of row r. Rows may differ (blocks sized to their text), so read
+    each one and scale it by the renderer's factor for the nominal row."""
+    h = ws.row_dimensions[r].height
+    return (h if h else BASE_PT) * ht / BASE_PT
+
 def row_map(ws, ht, scale, top):
     breaks = sorted(b.id for b in ws.row_breaks.brk)
     bounds = [1] + [b + 1 for b in breaks] + [ws.max_row + 2]
@@ -32,7 +40,7 @@ def row_map(ws, ht, scale, top):
     for p in range(len(bounds) - 1):
         y = top
         for r in range(bounds[p], bounds[p + 1]):
-            m[r] = (p, y); y += ht * scale
+            m[r] = (p, y); y += row_ht(ws, r, ht) * scale
     return m
 
 def calibrate(ws, pages, ht):
@@ -78,7 +86,7 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False, report
             if r1 not in rmap: continue
             pg, y_top = rmap[r1]
             if pg >= len(plines): continue
-            y_bot = y_top + (r2 - r1 + 1) * ht * scale
+            y_bot = y_top + sum(row_ht(ws, r, ht) for r in range(r1, r2 + 1)) * scale
             target = norm(v)
             acc, last_y = '', None
             for ly, lyb, ltext in plines[pg]:
@@ -129,7 +137,12 @@ def check(xlsx, pdf, ht=19.66, overflow_tol=2.0, report_unverified=False, report
             if last_y > y_bot + overflow_tol:
                 bad.append((cell.coordinate, r2 - r1 + 1, round(last_y - y_bot, 1), v[:70]))
             else:
-                spare = int((y_bot - last_y) // (ht * scale))
+                # one spare line = one line pitch of white under the text (the row height when
+                # every row is uniform; JHSOMCV_LINE_PT when blocks are sized to their text)
+                # JHSOMCV_GAP_PT: white a block keeps under its text on purpose (the gap after an entry)
+                unit = float(os.environ.get('JHSOMCV_LINE_PT') or BASE_PT) * ht / BASE_PT
+                gap = float(os.environ.get('JHSOMCV_GAP_PT') or 0) * ht / BASE_PT
+                spare = int((y_bot - last_y - gap * scale) // (unit * scale))
                 if spare >= 1 and (r2 - r1 + 1) - spare >= 1 and cell.column >= governs.get(r1, cell.column):
                     slack.append((cell.coordinate, r2 - r1 + 1, spare, v[:70]))
     if report_slack:
