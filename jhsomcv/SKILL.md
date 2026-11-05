@@ -13,6 +13,7 @@ The bundled resources do the work:
 - `references/word-format-spec.md` — page geometry, fonts, indents and tab stops, extracted from a CV the department confirms is correctly formatted. **Read before building the document.**
 - `assets/jhsom-cv-template.docx` — the complete I–XII skeleton with `NONE` under every subcategory, already in the correct geometry. **Start from this file. Never build from a blank document.**
 - `scripts/verify_pubs.py` — PubMed verification and publication-type classification. Run it; do not classify publications by eye.
+- `scripts/check_content.py` — content checks on the filled JSON (et al., missing owner name, submitted papers, Clinical Focus length, order). Run it before building.
 - `scripts/fill_template.py` — fills the template from a JSON content file with the correct geometry, bold owner, underlined mentees, per-subcategory numbering, shading and comments. Use it; do not write a builder from scratch.
 
 ## The one rule people get wrong
@@ -55,8 +56,11 @@ Run `scripts/verify_pubs.py` with the extracted citations. For every entry it re
 | Code, datasets, repositories | Other Publications → Other Media **[OM]** |
 | Question banks, SCORE/TWIS items, published curricula | Other Publications → Published Curricula **[PC]** |
 | Book chapters | Book Chapters, Monographs **[BC]** |
+| Guideline / Practice Guideline / Consensus Development Conference | Guidelines/Protocols, Consensus Statement **[GL]** |
 
-Only **[OR]** carries the PubMed-indexing requirement. Case reports, reviews and editorials in non-indexed journals stay in their own categories.
+Only **[OR]** carries the PubMed-indexing requirement.
+
+Departments differ on indexed guidelines and scientific statements: approved CVs list them in [GL] and in [OR]. The script suggests [GL]; ask the person, and once they decide, apply it to every such paper. Case reports, reviews and editorials in non-indexed journals stay in their own categories.
 
 ### Have the person open their own Google Scholar for you
 
@@ -126,6 +130,8 @@ Formatting rules that are explicit in the template:
 - Append `[SI/QI]` to any publication that also counts as system innovation / quality improvement.
 - Grants use: `dates<TAB>Title` then `Sponsor:` / `Primary Investigator:` / `Total direct cost:` / role and % effort, with each funding subcategory split into **Current**, **Pending**, **Previous**.
 - Intramural vs. extramural is relative to **Johns Hopkins**, not to whichever institution issued the award. An award from a prior institution is extramural.
+
+Then run `scripts/check_content.py content.json`. It flags `et al.` anywhere (show all authors applies to abstracts, posters and podium entries too), numbered entries that lack the owner's name (an author list cut before them), submitted or in-preparation papers, a Clinical Focus over 100 words, and entries out of chronological order, dating citations by their source details rather than by a year in the title. Resolve every flag before building: look up the full author list, do not guess it.
 
 ## Step 3a — Order and author names
 

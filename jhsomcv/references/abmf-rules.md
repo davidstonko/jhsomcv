@@ -104,4 +104,12 @@ The Roman numerals and letters are structural. Correctly formatted departmental 
 
 **Section XII is optional and frequently omitted.** Non-invited posters and podium presentations are the bulk of it. For a first faculty appointment they help; at promotion they are usually cut. Ask.
 
+**Postdoctoral vs. Professional Experience.** Internship, residency, chief residency, clinical fellowships and research fellowships go under Education and Training → Postdoctoral, each listed once. Professional Experience starts with faculty appointments and other employment (rank changes, named professorships, leadership roles, outside positions). A trainee's Professional Experience can be short or hold only outside roles; do not copy the training rows into it.
+
+**Clinical Focus is the only focus statement with a word limit** (100 words). Educational, Research and System Innovation Focus have none. When a Clinical Focus runs long, cut it in the person's voice and offer to move the rest to another focus statement.
+
+**Contribution notes.** The template requires a role note only for clinical-trial papers of 10 or more authors where the person is neither first nor senior, and for joint or corresponding authorship that is not obvious. Some faculty add a one-line role statement after every paper ("I ran the experiments and drafted the manuscript"); offer it as an option, never as a requirement.
+
+**Approved CVs are not the rules.** Comparing approved departmental CVs shows loose practice: empty headings deleted (often by full professors who will not be reviewed again), epub years left in place, PMIDs appended, section-level counts in headings. A CV that passed review is good evidence for layout and phrasing, not for leaving out categories. Follow the written template and say so if the person points at a colleague's CV.
+
 **Invited vs. submitted talks.** Invited talks go in RECOGNITION → Invited Talks, split JHMI/Regional, National, International. Submitted conference abstracts go in Section XII. Only the person knows which is which — ask, do not guess.

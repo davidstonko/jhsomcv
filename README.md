@@ -55,6 +55,7 @@ jhsomcv/                         the skill folder, which is what gets installed
   scripts/wrapcalc.py            word-wrap line counting from real font advance widths
   scripts/p052_widths.json       the advance widths wrapcalc.py reads
   scripts/build_template.py      generates the blank template in assets/ from taxonomy.py
+  scripts/check_content.py       content checks before building: et al., missing owner name, Clinical Focus length, order
   scripts/fill_template.py       fills the template from JSON content: geometry, bold owner, underlined mentees, numbering, shading, comments
   scripts/excel-reference/       the measured layout audit for an Excel build, reference only:
     audit_layout.py              analytic layout audit
